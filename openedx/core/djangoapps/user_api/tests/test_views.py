@@ -8,7 +8,7 @@ import re
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.test.utils import override_settings
 from unittest import SkipTest, skipUnless
 import ddt
@@ -17,7 +17,6 @@ import mock
 from xmodule.modulestore.tests.factories import CourseFactory
 
 from student.tests.factories import UserFactory
-from unittest import SkipTest
 from django_comment_common import models
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from third_party_auth.tests.testutil import simulate_running_pipeline
@@ -35,7 +34,7 @@ ROLE_LIST_URI = "/user_api/v1/forum_roles/Moderator/users/"
 
 
 @override_settings(EDX_API_KEY=TEST_API_KEY)
-class ApiTestCase(TestCase):
+class ApiTestCase(TransactionTestCase):
 
     LIST_URI = USER_LIST_URI
 
@@ -565,7 +564,7 @@ class PreferenceUsersListViewTest(UserApiTestCase):
 
 @ddt.ddt
 @skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
-class LoginSessionViewTest(ApiTestCase):
+class LoginSessionViewTest(ApiTestCase, TestCase):
     """Tests for the login end-points of the user API. """
 
     USERNAME = "bob"
@@ -776,7 +775,7 @@ class PasswordResetViewTest(ApiTestCase):
 
 @ddt.ddt
 @skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
-class RegistrationViewTest(ApiTestCase):
+class RegistrationViewTest(ApiTestCase, TestCase):
     """Tests for the registration end-points of the User API. """
 
     USERNAME = "bob"
