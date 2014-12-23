@@ -29,6 +29,8 @@ from xmodule.modulestore.exceptions import ItemNotFoundError, DuplicateCourseErr
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.locations import Location
 from opaque_keys.edx.keys import CourseKey
+from openedx.core.djangoapps.user_api.partition_schemes import RandomUserPartitionScheme
+from openedx.core.djangoapps.course_groups.partition_scheme import get_cohorted_user_partition
 
 from django_future.csrf import ensure_csrf_cookie
 from contentstore.course_info_model import get_course_updates, update_course_updates, delete_course_update
@@ -1214,15 +1216,23 @@ class GroupConfiguration(object):
         if len(self.configuration.get('groups', [])) < 1:
             raise GroupConfigurationsValidationError(_("must have at least one group"))
 
-    def generate_id(self, used_ids):
+    @staticmethod
+    def generate_id(used_ids):
         """
         Generate unique id for the group configuration.
         If this id is already used, we generate new one.
         """
-        cid = random.randint(100, 10 ** 12)
+        def random_sql_int():
+            """
+            Generate a random number that can fit in a MySQL INT
+            field, since group and group configuration IDs are stored
+            in the `CourseUserGroupPartitionGroup` table.
+            """
+            return random.randrange(100, 2 ** 31)
+        cid = random_sql_int()
 
         while cid in used_ids:
-            cid = random.randint(100, 10 ** 12)
+            cid = random_sql_int()
 
         return cid
 
@@ -1230,7 +1240,10 @@ class GroupConfiguration(object):
         """
         Assign id for the json representation of group configuration.
         """
-        self.configuration['id'] = int(configuration_id) if configuration_id else self.generate_id(self.get_used_ids())
+        if configuration_id:
+            self.configuration['id'] = int(configuration_id)
+        else:
+            self.configuration['id'] = GroupConfiguration.generate_id(GroupConfiguration.get_used_ids(self.course))
 
     def assign_group_ids(self):
         """
@@ -1240,14 +1253,15 @@ class GroupConfiguration(object):
         # Assign ids to every group in configuration.
         for group in self.configuration.get('groups', []):
             if group.get('id') is None:
-                group["id"] = self.generate_id(used_ids)
+                group["id"] = GroupConfiguration.generate_id(used_ids)
                 used_ids.append(group["id"])
 
-    def get_used_ids(self):
+    @staticmethod
+    def get_used_ids(course):
         """
         Return a list of IDs that already in use.
         """
-        return set([p.id for p in self.course.user_partitions])
+        return set([p.id for p in course.user_partitions])
 
     def get_user_partition(self):
         """
@@ -1272,10 +1286,12 @@ class GroupConfiguration(object):
         """
         usage_info = GroupConfiguration.get_usage_info(course, store)
         configurations = []
+        # TODO: Usage info is currently defined for the 'random' partition scheme.
         for partition in course.user_partitions:
-            configuration = partition.to_json()
-            configuration['usage'] = usage_info.get(partition.id, [])
-            configurations.append(configuration)
+            if partition.scheme == RandomUserPartitionScheme:
+                configuration = partition.to_json()
+                configuration['usage'] = usage_info.get(partition.id, [])
+                configurations.append(configuration)
         return configurations
 
     @staticmethod
@@ -1346,6 +1362,26 @@ class GroupConfiguration(object):
         configuration_json['usage'] = usage_information.get(configuration.id, [])
         return configuration_json
 
+    @staticmethod
+    def get_or_create_cohorted_user_partition(course, store, user_id):
+        """
+        Returns the first user partition from the course which uses the
+        CohortPartitionScheme, or creates one if no such partition is
+        found.
+        """
+        cohorted_partition = get_cohorted_user_partition(course.id)
+        if cohorted_partition is None:
+            cohorted_partition = UserPartition(
+                id=GroupConfiguration.generate_id(GroupConfiguration.get_used_ids(course)),
+                name='Cohort Group Configuration',  # TODO: confirm w/ doc/prod -- translate? (below as well)?
+                description='The groups in this configuration can be mapped to cohort groups in the LMS.',
+                groups=[],
+                scheme_id='cohort'
+            )
+            course.user_partitions.append(cohorted_partition)
+            store.update_item(course, user_id)
+        return cohorted_partition
+
 
 @require_http_methods(("GET", "POST"))
 @login_required
@@ -1367,12 +1403,16 @@ def group_configurations_list_handler(request, course_key_string):
         if 'text/html' in request.META.get('HTTP_ACCEPT', 'text/html'):
             group_configuration_url = reverse_course_url('group_configurations_list_handler', course_key)
             course_outline_url = reverse_course_url('course_handler', course_key)
-            configurations = GroupConfiguration.add_usage_info(course, store)
+            random_configurations = GroupConfiguration.add_usage_info(course, store)
+            cohort_configuration = GroupConfiguration.get_or_create_cohorted_user_partition(
+                course, store, request.user.id
+            ).to_json()
             return render_to_response('group_configurations.html', {
                 'context_course': course,
                 'group_configuration_url': group_configuration_url,
                 'course_outline_url': course_outline_url,
-                'configurations': configurations,
+                'experiment_configurations': random_configurations if should_show_content_experiment_groups(course) else None,
+                'cohort_configuration': cohort_configuration
             })
         elif "application/json" in request.META.get('HTTP_ACCEPT'):
             if request.method == 'POST':
@@ -1449,6 +1489,16 @@ def group_configurations_detail_handler(request, course_key_string, group_config
             course.user_partitions.pop(index)
             store.update_item(course, request.user.id)
             return JsonResponse(status=204)
+
+
+def should_show_content_experiment_groups(course):
+    """
+    Returns true if Studio should show the "Group Configurations" page for the specified course.
+    """
+    return (
+        SPLIT_TEST_COMPONENT_TYPE in ADVANCED_COMPONENT_TYPES and
+        SPLIT_TEST_COMPONENT_TYPE in course.advanced_modules
+    )
 
 
 def _get_course_creator_status(user):
