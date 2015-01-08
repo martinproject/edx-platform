@@ -1,10 +1,14 @@
+/**
+ * This class defines a simple display view for a content group.
+ * It is expected to be backed by a Group model.
+ */
 define([
     'js/views/baseview'
 ], function(BaseView) {
     'use strict';
 
-    var GroupDetails = BaseView.extend({
-        tagName: 'div', // TODO: confirm class and tag
+    var ContentGroupDetailsView = BaseView.extend({
+        tagName: 'div',
         className: 'group-configuration-details',
 
         events: {
@@ -16,7 +20,7 @@ define([
         },
 
         initialize: function() {
-            this.template = this.loadTemplate('group-details');
+            this.template = this.loadTemplate('content-group-details');
         },
 
         render: function() {
@@ -24,5 +28,5 @@ define([
         }
     });
 
-    return GroupDetails;
+    return ContentGroupDetailsView;
 });

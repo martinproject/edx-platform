@@ -1,10 +1,14 @@
+/**
+ * This class defines an editing view for content groups.
+ * It is expected to be backed by a Group model.
+ */
 define([
-    'js/views/list_item_edit'
+    'js/views/list_item_editor', 'underscore'
 ],
-function(ListItemEdit) {
+function(ListItemEditor, _) {
     'use strict';
 
-    var GroupItemEdit = ListItemEdit.extend({
+    var ContentGroupEditorView = ListItemEditor.extend({
         tagName: 'div',
         className: 'group-configuration-edit',
         events: {
@@ -13,15 +17,16 @@ function(ListItemEdit) {
         },
 
         initialize: function() {
-            ListItemEdit.prototype.initialize.call(this);
-            this.template = this.loadTemplate('group-item-edit');
+            ListItemEditor.prototype.initialize.call(this);
+            this.template = this.loadTemplate('content-group-editor');
         },
 
         getTemplateOptions: function() {
             return {
                 name: this.model.escape('name'),
                 index: this.model.collection.indexOf(this.model),
-                isNew: this.model.isNew()
+                isNew: this.model.isNew(),
+                uniqueId: _.uniqueId()
             };
         },
 
@@ -35,5 +40,5 @@ function(ListItemEdit) {
         }
     });
 
-    return GroupItemEdit;
+    return ContentGroupEditorView;
 });

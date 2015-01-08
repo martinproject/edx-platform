@@ -1,22 +1,22 @@
 define([
     'jquery', 'underscore', 'gettext', 'js/views/pages/base_page',
-    'js/views/group_configurations_list', 'js/views/group_list'
+    'js/views/group_configurations_list', 'js/views/content_group_list'
 ],
-function ($, _, gettext, BasePage, GroupConfigurationsList, GroupList) {
+function ($, _, gettext, BasePage, GroupConfigurationsListView, ContentGroupListView) {
     'use strict';
     var GroupConfigurationsPage = BasePage.extend({
         initialize: function(options) {
             BasePage.prototype.initialize.call(this);
             this.experimentsEnabled = options.experimentsEnabled;
             if (this.experimentsEnabled) {
-                this.experimentGroupsCollection = options.experimentGroupsCollection;
-                this.experimentGroupsListView = new GroupConfigurationsList({
-                    collection: this.experimentGroupsCollection
+                this.experimentGroupConfigurations = options.experimentGroupConfigurations;
+                this.experimentGroupsListView = new GroupConfigurationsListView({
+                    collection: this.experimentGroupConfigurations
                 });
             }
-            this.cohortGroupConfiguration = options.cohortGroupConfiguration;
-            this.cohortGroupsListView = new GroupList({
-                collection: this.cohortGroupConfiguration.get('groups')
+            this.contentGroupConfiguration = options.contentGroupConfiguration;
+            this.cohortGroupsListView = new ContentGroupListView({
+                collection: this.contentGroupConfiguration.get('groups')
             });
         },
 
@@ -39,8 +39,8 @@ function ($, _, gettext, BasePage, GroupConfigurationsList, GroupList) {
         },
 
         onBeforeUnload: function () {
-            var dirty = this.cohortGroupConfiguration.isDirty() ||
-                (this.experimentsEnabled && this.experimentGroupsCollection.find(function(configuration) {
+            var dirty = this.contentGroupConfiguration.isDirty() ||
+                (this.experimentsEnabled && this.experimentGroupConfigurations.find(function(configuration) {
                     return configuration.isDirty();
                 }));
 
@@ -62,7 +62,7 @@ function ($, _, gettext, BasePage, GroupConfigurationsList, GroupList) {
          * @param {String|Number} Id of the group configuration.
          */
         expandConfiguration: function (id) {
-            var groupConfig = this.experimentsEnabled && this.experimentGroupsCollection.findWhere({
+            var groupConfig = this.experimentsEnabled && this.experimentGroupConfigurations.findWhere({
                 id: parseInt(id)
             });
 

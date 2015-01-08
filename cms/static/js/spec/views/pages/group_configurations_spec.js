@@ -14,11 +14,11 @@ define([
             var view = new GroupConfigurationsPage({
                 el: $('#content'),
                 experimentsEnabled: true,
-                experimentGroupsCollection: new GroupConfigurationCollection({
+                experimentGroupConfigurations: new GroupConfigurationCollection({
                     id: 0,
                     name: 'Configuration 1'
                 }),
-                cohortGroupConfiguration: new GroupConfigurationModel({groups: []})
+                contentGroupConfiguration: new GroupConfigurationModel({groups: []})
             });
 
             if (!disableSpy) {
@@ -35,9 +35,9 @@ define([
         beforeEach(function () {
             setFixtures(mockGroupConfigurationsPage);
             TemplateHelpers.installTemplates([
-                'no-group-configurations', 'group-configuration-edit',
+                'no-group-configurations', 'group-configuration-editor',
                 'group-configuration-details', 'add-list-item',
-                'no-groups', 'group-details', 'group-item-edit',
+                'no-content-groups', 'content-group-details', 'content-group-editor',
                 'group-edit'
             ]);
 
@@ -76,7 +76,7 @@ define([
                     view = renderPage(),
                     message;
 
-                view.experimentGroupsCollection.at(0).set('name', 'Configuration 2');
+                view.experimentGroupConfigurations.at(0).set('name', 'Configuration 2');
                 message = view.onBeforeUnload();
                 expect(message).toBe(expectedMessage);
             });
