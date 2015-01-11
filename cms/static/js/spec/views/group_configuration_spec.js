@@ -2,13 +2,14 @@ define([
     'underscore', 'js/models/course', 'js/models/group_configuration', 'js/models/group',
     'js/collections/group_configuration', 'js/collections/group',
     'js/views/group_configuration_details', 'js/views/group_configurations_list', 'js/views/group_configuration_editor',
-    'js/views/group_configuration_item', 'js/views/group_edit', 'js/views/content_group_list',
+    'js/views/group_configuration_item', 'js/views/experiment_group_edit', 'js/views/content_group_list',
     'js/views/feedback_notification', 'js/common_helpers/ajax_helpers', 'js/common_helpers/template_helpers',
     'js/spec_helpers/view_helpers', 'jasmine-stealth'
 ], function(
     _, Course, GroupConfigurationModel, GroupModel, GroupConfigurationCollection, GroupCollection,
-    GroupConfigurationDetailsView, GroupConfigurationsListView, GroupConfigurationEditorView, GroupConfigurationItemView, GroupEditView,
-    GroupList, Notification, AjaxHelpers, TemplateHelpers, ViewHelpers
+    GroupConfigurationDetailsView, GroupConfigurationsListView, GroupConfigurationEditorView,
+    GroupConfigurationItemView, ExperimentGroupEditView, GroupList, Notification, AjaxHelpers, TemplateHelpers,
+    ViewHelpers
 ) {
     'use strict';
     var SELECTORS = {
@@ -87,7 +88,7 @@ define([
         delete window.course;
     });
 
-    describe('GroupConfigurationDetailsView', function() {
+    describe('GroupConfigurationDetailsView, the details view for experiment group configurations', function() {
         beforeEach(function() {
             TemplateHelpers.installTemplate('group-configuration-details', true);
 
@@ -256,7 +257,7 @@ define([
         });
     });
 
-    describe('GroupConfigurationEditorView', function() {
+    describe('GroupConfigurationEditorView, the editor view for experiment group configurations', function() {
 
         var setValuesToInputs = function (view, values) {
             _.each(values, function (value, selector) {
@@ -487,12 +488,12 @@ define([
         });
     });
 
-    describe('GroupConfigurationsListView', function() {
+    describe('GroupConfigurationsListView, the list view for experiment group configurations', function() {
         var emptyMessage = 'You have not created any group configurations yet.';
 
         beforeEach(function() {
             TemplateHelpers.installTemplates(
-                ['add-list-item', 'no-group-configurations', 'group-configuration-editor', 'group-edit']
+                ['no-group-configurations', 'group-configuration-editor', 'group-edit']
             );
 
             this.model = new GroupConfigurationModel({ id: 0 });
@@ -533,7 +534,7 @@ define([
         });
     });
 
-    describe('GroupConfigurationItemView', function() {
+    describe('GroupConfigurationItemView, the controller view for experiment group configurations', function() {
         var clickDeleteItem;
 
         beforeEach(function() {
@@ -602,7 +603,7 @@ define([
         });
     });
 
-    describe('GroupEditView', function() {
+    describe('ExperimentGroupEditView, the editor view for groups within experiment group configurations', function() {
         beforeEach(function() {
             TemplateHelpers.installTemplate('group-edit', true);
 
@@ -612,7 +613,7 @@ define([
 
             this.collection = new GroupCollection([this.model]);
 
-            this.view = new GroupEditView({
+            this.view = new ExperimentGroupEditView({
                 model: this.model
             });
         });
@@ -631,14 +632,24 @@ define([
         });
     });
 
-    describe('ContentGroupListView', function() {
+    describe('ContentGroupListView, the list view for content groups', function() {
         var newGroupCss = '.new-button',
             addGroupCss = '.action-add',
             inputCss = '.group-configuration-name-input',
             saveButtonCss = '.action-primary',
             cancelButtonCss = '.action-cancel',
             validationErrorCss = '.group-configuration-edit-error',
-            createGroups, renderView, editNewGroup, verifyEditingGroup, respondToSave, expectGroupsVisible;
+            scopedGroupSelector, createGroups, renderView, saveOrCancel, editNewGroup, editExistingGroup,
+            verifyEditingGroup, respondToSave, expectGroupsVisible, correctValidationError;
+
+        scopedGroupSelector = function(groupIndex, additionalSelectors) {
+            var groupSelector = '.group-configurations-list-item-' + groupIndex;
+            if (additionalSelectors) {
+                return groupSelector + ' ' + additionalSelectors;
+            } else {
+                return groupSelector;
+            }
+        };
 
         createGroups = function (groupNames) {
             var groups = new GroupCollection(_.map(groupNames, function (groupName) {
@@ -646,7 +657,7 @@ define([
                 })),
                 groupConfiguration = new GroupConfigurationModel({
                     id: 0,
-                    name: 'Group Configuration',
+                    name: 'Content Group Configuration',
                     groups: groups
                 });
             groupConfiguration.urlRoot = '/mock_url';
@@ -659,22 +670,41 @@ define([
             return view;
         };
 
-        editNewGroup = function(view, groupName) {
+        saveOrCancel = function(view, options, groupIndex) {
+            if (options.save) {
+                view.$(scopedGroupSelector(groupIndex, saveButtonCss)).click();
+            } else if (options.cancel) {
+                view.$(scopedGroupSelector(groupIndex, cancelButtonCss)).click();
+            }
+        };
+
+        editNewGroup = function(view, options) {
+            var newGroupIndex;
             if (view.collection.length === 0) {
                 view.$(newGroupCss).click();
             } else {
                 view.$(addGroupCss).click();
             }
-            view.$(inputCss).val(groupName);
-            verifyEditingGroup(view, true);
+            newGroupIndex = view.collection.length - 1;
+            view.$(inputCss).val(options.newName);
+            verifyEditingGroup(view, true, newGroupIndex);
+            saveOrCancel(view, options, newGroupIndex);
         };
 
-        verifyEditingGroup = function(view, expectEditing) {
+        editExistingGroup = function(view, options) {
+            var groupIndex = options.groupIndex || 0;
+            view.$(scopedGroupSelector(groupIndex, '.edit')).click();
+            view.$(scopedGroupSelector(groupIndex, inputCss)).val(options.newName);
+            saveOrCancel(view, options, groupIndex);
+        };
+
+        verifyEditingGroup = function(view, expectEditing, index) {
             // Should prevent the user from opening more than one edit
             // form at a time by removing the add button(s) when
             // editing a group.
+            index = index || 0;
             if (expectEditing) {
-                expect(view.$('.group-configuration-edit')).toExist();
+                expect(view.$(scopedGroupSelector(index, '.group-configuration-edit'))).toExist();
                 expect(view.$(newGroupCss)).not.toExist();
                 expect(view.$(addGroupCss)).not.toExist();
             } else {
@@ -694,11 +724,20 @@ define([
             expect(requests[0].method).toBe('POST');
             expect(requests[0].url).toBe('/mock_url/0');
             AjaxHelpers.respondWithJson(requests, {
-                name: 'Group Configuration',
+                name: 'Content Group Configuration',
                 groups: view.collection.map(function(groupModel, index) {
                     return _.extend(groupModel.toJSON(), {id: index});
                 })
             });
+        };
+
+        correctValidationError = function(view, requests, newGroupName) {
+            expect(view.$(validationErrorCss)).toExist();
+            verifyEditingGroup(view, true);
+            view.$(inputCss).val(newGroupName);
+            view.$(saveButtonCss).click();
+            respondToSave(requests, view);
+            expect(view.$(validationErrorCss)).not.toExist();
         };
 
         expectGroupsVisible = function(view, groupNames) {
@@ -709,12 +748,13 @@ define([
 
         beforeEach(function() {
             TemplateHelpers.installTemplates(
-                ['add-list-item', 'no-content-groups', 'content-group-editor', 'content-group-details']
+                ['no-content-groups', 'content-group-editor', 'content-group-details']
             );
         });
 
         it('shows a message when no groups are present', function() {
-            expect(renderView().$('.no-group-configurations-content')).toExist();
+            expect(renderView().$('.no-group-configurations-content'))
+                .toContainText('You have not created any content groups yet.');
         });
 
         it('can render groups', function() {
@@ -728,8 +768,7 @@ define([
             var requests = AjaxHelpers.requests(this),
                 newGroupName = 'New Group Name',
                 view = renderView();
-            editNewGroup(view, newGroupName);
-            view.$(saveButtonCss).click();
+            editNewGroup(view, {newName: newGroupName, save: true});
             respondToSave(requests, view);
             verifyEditingGroup(view, false);
             expectGroupsVisible(view, [newGroupName]);
@@ -740,10 +779,9 @@ define([
                 oldGroupName = 'Old Group Name',
                 newGroupName = 'New Group Name',
                 view = renderView([oldGroupName]);
-            editNewGroup(view, newGroupName);
-            view.$(saveButtonCss).click();
+            editNewGroup(view, {newName: newGroupName, save: true});
             respondToSave(requests, view);
-            verifyEditingGroup(view, false);
+            verifyEditingGroup(view, false, 1);
             expectGroupsVisible(view, [oldGroupName, newGroupName]);
         });
 
@@ -751,8 +789,7 @@ define([
             var requests = AjaxHelpers.requests(this),
                 newGroupName = 'New Group Name',
                 view = renderView();
-            editNewGroup(view, newGroupName);
-            view.$(cancelButtonCss).click();
+            editNewGroup(view, {newName: newGroupName, cancel: true});
             expect(requests.length).toBe(0);
             verifyEditingGroup(view, false);
             expect(view.$()).not.toContainText(newGroupName);
@@ -762,9 +799,7 @@ define([
             var requests = AjaxHelpers.requests(this),
                 originalGroupName = 'Original Group Name',
                 view = renderView([originalGroupName]);
-            view.$('.edit').click();
-            view.$(inputCss).val('New Group Name');
-            view.$(cancelButtonCss).click();
+            editExistingGroup(view, {newName: 'New Group Name', cancel: true});
             verifyEditingGroup(view, false);
             expect(requests.length).toBe(0);
             expect(view.collection.at(0).get('name')).toBe(originalGroupName);
@@ -774,23 +809,25 @@ define([
             var requests = AjaxHelpers.requests(this),
                 newGroupName = 'New Group Name',
                 view = renderView();
-            editNewGroup(view, '');
-            view.$(saveButtonCss).click();
+            editNewGroup(view, {newName: '', save: true});
             expect(requests.length).toBe(0);
-            expect(view.$(validationErrorCss)).toExist();
-            verifyEditingGroup(view, true);
-            view.$(inputCss).val(newGroupName);
-            view.$(saveButtonCss).click();
-            respondToSave(requests, view);
-            expect(view.$(validationErrorCss)).not.toExist();
+            correctValidationError(view, requests, newGroupName);
+        });
+
+        it('can not invalidate an existing content group', function() {
+            var requests = AjaxHelpers.requests(this),
+                oldGroupName = 'Old Group Name',
+                view = renderView([oldGroupName]);
+            editExistingGroup(view, {newName: '', save: true});
+            expect(requests.length).toBe(0);
+            correctValidationError(view, requests, oldGroupName);
         });
 
         it('trims whitespace', function() {
             var requests = AjaxHelpers.requests(this),
                 newGroupName = 'New Group Name',
                 view = renderView();
-            editNewGroup(view, '  ' + newGroupName + '  ');
-            view.$(saveButtonCss).click();
+            editNewGroup(view, {newName: '  ' + newGroupName + '  ', save: true});
             respondToSave(requests, view);
             expect(view.collection.at(0).get('name')).toBe(newGroupName);
         });

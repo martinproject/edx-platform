@@ -5,9 +5,9 @@
  * It is expected to be backed by a Group model.
  */
 define([
-    'js/views/list_item', 'js/views/group_configuration_details', 'js/views/group_configuration_editor'
+    'js/views/list_item', 'js/views/group_configuration_details', 'js/views/group_configuration_editor', 'gettext'
 ], function(
-    ListItemView, GroupConfigurationDetailsView, GroupConfigurationEditorView
+    ListItemView, GroupConfigurationDetailsView, GroupConfigurationEditorView, gettext
 ) {
     'use strict';
 
@@ -25,7 +25,8 @@ define([
             };
         },
 
-        itemDisplayName: 'Group Configuration',
+        // Translators: this refers to a collection of groups.
+        itemDisplayName: gettext('group configuration'),
 
         canDelete: true,
 
