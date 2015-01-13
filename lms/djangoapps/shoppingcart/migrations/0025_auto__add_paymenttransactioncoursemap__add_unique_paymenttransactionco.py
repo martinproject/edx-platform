@@ -57,7 +57,7 @@ class Migration(SchemaMigration):
             ('date_range_end', self.gf('django.db.models.fields.DateTimeField')(db_index=True)),
             ('rows_processed', self.gf('django.db.models.fields.IntegerField')()),
             ('rows_in_error', self.gf('django.db.models.fields.IntegerField')()),
-            ('sync_started_at', self.gf('django.db.models.fields.DateTimeField')(default=datetime.datetime(2015, 1, 8, 0, 0))),
+            ('sync_started_at', self.gf('django.db.models.fields.DateTimeField')(default=datetime.datetime(2015, 1, 13, 0, 0))),
             ('sync_ended_at', self.gf('django.db.models.fields.DateTimeField')(null=True)),
         ))
         db.send_create_signal('shoppingcart', ['PaymentTransactionSync'])
@@ -128,9 +128,10 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'Coupon'},
             'code': ('django.db.models.fields.CharField', [], {'max_length': '32', 'db_index': 'True'}),
             'course_id': ('xmodule_django.models.CourseKeyField', [], {'max_length': '255'}),
-            'created_at': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2015, 1, 8, 0, 0)'}),
+            'created_at': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2015, 1, 13, 0, 0)'}),
             'created_by': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
             'description': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'blank': 'True'}),
+            'expiration_date': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'is_active': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'percentage_discount': ('django.db.models.fields.IntegerField', [], {'default': '0'})
@@ -158,10 +159,11 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'CourseRegistrationCode'},
             'code': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '32', 'db_index': 'True'}),
             'course_id': ('xmodule_django.models.CourseKeyField', [], {'max_length': '255', 'db_index': 'True'}),
-            'created_at': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2015, 1, 8, 0, 0)'}),
+            'created_at': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2015, 1, 13, 0, 0)'}),
             'created_by': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'created_by_user'", 'to': "orm['auth.User']"}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'invoice': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['shoppingcart.Invoice']", 'null': 'True'}),
+            'mode_slug': ('django.db.models.fields.CharField', [], {'max_length': '100', 'null': 'True'}),
             'order': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'purchase_order'", 'null': 'True', 'to': "orm['shoppingcart.Order']"})
         },
         'shoppingcart.donation': {
@@ -288,7 +290,7 @@ class Migration(SchemaMigration):
             'rows_in_error': ('django.db.models.fields.IntegerField', [], {}),
             'rows_processed': ('django.db.models.fields.IntegerField', [], {}),
             'sync_ended_at': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
-            'sync_started_at': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2015, 1, 8, 0, 0)'})
+            'sync_started_at': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2015, 1, 13, 0, 0)'})
         },
         'shoppingcart.paymenttransactionsyncerror': {
             'Meta': {'object_name': 'PaymentTransactionSyncError'},
@@ -304,7 +306,7 @@ class Migration(SchemaMigration):
             'course_enrollment': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['student.CourseEnrollment']", 'null': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'order': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['shoppingcart.Order']", 'null': 'True'}),
-            'redeemed_at': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2015, 1, 8, 0, 0)', 'null': 'True'}),
+            'redeemed_at': ('django.db.models.fields.DateTimeField', [], {'default': 'datetime.datetime(2015, 1, 13, 0, 0)', 'null': 'True'}),
             'redeemed_by': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
             'registration_code': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['shoppingcart.CourseRegistrationCode']"})
         },

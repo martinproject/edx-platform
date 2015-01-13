@@ -1,5 +1,5 @@
 """
-Tests for PaymentProcessorTransaction related models and logic
+Tests for PaymentTransaction related models and logic
 """
 import datetime
 import uuid
@@ -15,7 +15,7 @@ from xmodule.modulestore.tests.django_utils import (
 from xmodule.modulestore.tests.factories import CourseFactory
 
 from shoppingcart.models import (
-    Order, PaidCourseRegistration, PaymentProcessorTransaction,
+    Order, PaidCourseRegistration, PaymentTransaction,
     TRANSACTION_TYPE_PURCHASE, TRANSACTION_TYPE_REFUND,
     PaymentTransactionCourseMap
 )
@@ -31,10 +31,10 @@ MODULESTORE_CONFIG = mixed_store_config(settings.COMMON_TEST_DATA_ROOT, {}, incl
 
 
 @override_settings(MODULESTORE=MODULESTORE_CONFIG)
-class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
+class PaymentTransactionModelTests(ModuleStoreTestCase):
     """
     This test class will perform unit tests on the models regarding
-    the PaymentProcessorTransaction
+    the PaymentTransaction
     """
     def setUp(self):
         """
@@ -73,7 +73,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         """
         Happy path testing of a new transaction
         """
-        transaction = PaymentProcessorTransaction.create(
+        transaction = PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
@@ -84,29 +84,29 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         )
 
         # look up directly in database and assert that they are the same
-        saved_transaction = PaymentProcessorTransaction.objects.get(
+        saved_transaction = PaymentTransaction.objects.get(
             remote_transaction_id=transaction.remote_transaction_id
         )
         self.assertEqual(transaction, saved_transaction)
 
         # then make sure there we can query against the mappings to the course
-        queryset = PaymentProcessorTransaction.get_transactions_for_course(self.course_key)
+        queryset = PaymentTransaction.get_transactions_for_course(self.course_key)
         self.assertEqual(len(queryset), 1)
         self.assertEqual(queryset[0].transaction, transaction)
 
-        queryset = PaymentProcessorTransaction.get_transactions_for_course(
+        queryset = PaymentTransaction.get_transactions_for_course(
             self.course_key, transaction_type=TRANSACTION_TYPE_PURCHASE,
         )
         self.assertEqual(len(queryset), 1)
         self.assertEqual(queryset[0].transaction, transaction)
 
-        queryset = PaymentProcessorTransaction.get_transactions_for_course(
+        queryset = PaymentTransaction.get_transactions_for_course(
             self.course_key, transaction_type=TRANSACTION_TYPE_REFUND,
         )
         self.assertEqual(len(queryset), 0)
 
         # check some of the totals
-        amounts = PaymentProcessorTransaction.get_transaction_totals_for_course(self.course_key)
+        amounts = PaymentTransaction.get_transaction_totals_for_course(self.course_key)
         self.assertEqual(amounts['purchased'], self.cost)
         self.assertEqual(amounts['refunded'], 0.0)
 
@@ -115,7 +115,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         Similar happy path, but with multiple purchases, let's make sure the aggregate queries are correct.
         Interleave transactions between courses to make sure the GROUP BY is working as expected
         """
-        PaymentProcessorTransaction.create(
+        PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
@@ -129,7 +129,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         PaidCourseRegistration.add_to_order(order2, self.course_key2)
         order2.purchase()
 
-        PaymentProcessorTransaction.create(
+        PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
@@ -143,7 +143,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         PaidCourseRegistration.add_to_order(order3, self.course_key2)
         order3.purchase()
 
-        PaymentProcessorTransaction.create(
+        PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
@@ -157,7 +157,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         PaidCourseRegistration.add_to_order(order4, self.course_key)
         order4.purchase()
 
-        PaymentProcessorTransaction.create(
+        PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
@@ -168,7 +168,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         )
 
         # add one refund transaction
-        PaymentProcessorTransaction.create(
+        PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
@@ -179,28 +179,28 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         )
 
         # check some of the totals
-        amounts = PaymentProcessorTransaction.get_transaction_totals_for_course(self.course_key)
+        amounts = PaymentTransaction.get_transaction_totals_for_course(self.course_key)
         self.assertEqual(amounts['purchased'], 2.0 * self.cost)
         self.assertEqual(amounts['refunded'], -self.cost)
 
-        amounts = PaymentProcessorTransaction.get_transaction_totals_for_course(self.course_key2)
+        amounts = PaymentTransaction.get_transaction_totals_for_course(self.course_key2)
         self.assertEqual(amounts['purchased'], 2.0 * self.cost2)
         self.assertEqual(amounts['refunded'], 0.0)
 
         # check some various time slices
         yesterday = datetime.datetime.now(pytz.UTC) - datetime.timedelta(1)
         day_before = datetime.datetime.now(pytz.UTC) - datetime.timedelta(2)
-        amounts = PaymentProcessorTransaction.get_transaction_totals_for_course(self.course_key, day_before, yesterday)
+        amounts = PaymentTransaction.get_transaction_totals_for_course(self.course_key, day_before, yesterday)
         self.assertEqual(amounts['purchased'], 0.0)
         self.assertEqual(amounts['refunded'], 0.0)
 
         tomorrow = datetime.datetime.now(pytz.UTC) + datetime.timedelta(1)
         day_after = datetime.datetime.now(pytz.UTC) + datetime.timedelta(2)
-        amounts = PaymentProcessorTransaction.get_transaction_totals_for_course(self.course_key, tomorrow, day_after)
+        amounts = PaymentTransaction.get_transaction_totals_for_course(self.course_key, tomorrow, day_after)
         self.assertEqual(amounts['purchased'], 0.0)
         self.assertEqual(amounts['refunded'], 0.0)
 
-        amounts = PaymentProcessorTransaction.get_transaction_totals_for_course(self.course_key, yesterday, day_after)
+        amounts = PaymentTransaction.get_transaction_totals_for_course(self.course_key, yesterday, day_after)
         self.assertEqual(amounts['purchased'], 2.0 * self.cost)
         self.assertEqual(amounts['refunded'], -self.cost)
 
@@ -213,7 +213,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         PaidCourseRegistration.add_to_order(order, self.course_key2)
         order.purchase()
 
-        PaymentProcessorTransaction.create(
+        PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
@@ -223,11 +223,11 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
             TRANSACTION_TYPE_PURCHASE
         )
 
-        amounts = PaymentProcessorTransaction.get_transaction_totals_for_course(self.course_key)
+        amounts = PaymentTransaction.get_transaction_totals_for_course(self.course_key)
         self.assertEqual(amounts['purchased'], self.cost)
         self.assertEqual(amounts['refunded'], 0.0)
 
-        amounts = PaymentProcessorTransaction.get_transaction_totals_for_course(self.course_key2)
+        amounts = PaymentTransaction.get_transaction_totals_for_course(self.course_key2)
         self.assertEqual(amounts['purchased'], self.cost2)
         self.assertEqual(amounts['refunded'], 0.0)
 
@@ -240,7 +240,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
 
         transaction_id = uuid.uuid4()
         with self.assertRaises(Exception):
-            PaymentProcessorTransaction.create(
+            PaymentTransaction.create(
                 transaction_id,
                 uuid.uuid4(),
                 datetime.datetime.now(pytz.UTC),
@@ -251,7 +251,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
             )
 
         # make sure that the transaction did not save
-        self.assertFalse(PaymentProcessorTransaction.objects.filter(remote_transaction_id=transaction_id).exists())
+        self.assertFalse(PaymentTransaction.objects.filter(remote_transaction_id=transaction_id).exists())
 
     def test_bad_amount(self):
         """
@@ -259,7 +259,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         """
         transaction_id = uuid.uuid4()
         with self.assertRaises(Exception):
-            PaymentProcessorTransaction.create(
+            PaymentTransaction.create(
                 transaction_id,
                 uuid.uuid4(),
                 datetime.datetime.now(pytz.UTC),
@@ -270,7 +270,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
             )
 
         # make sure that the transaction did not save
-        self.assertFalse(PaymentProcessorTransaction.objects.filter(remote_transaction_id=transaction_id).exists())
+        self.assertFalse(PaymentTransaction.objects.filter(remote_transaction_id=transaction_id).exists())
 
     def test_bad_order_id(self):
         """
@@ -278,7 +278,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         """
         transaction_id = uuid.uuid4()
         with self.assertRaises(OrderDoesNotExistException):
-            PaymentProcessorTransaction.create(
+            PaymentTransaction.create(
                 transaction_id,
                 uuid.uuid4(),
                 datetime.datetime.now(pytz.UTC),
@@ -289,13 +289,13 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
             )
 
         # make sure that the transaction did not save
-        self.assertFalse(PaymentProcessorTransaction.objects.filter(remote_transaction_id=transaction_id).exists())
+        self.assertFalse(PaymentTransaction.objects.filter(remote_transaction_id=transaction_id).exists())
 
     def test_duplicate_same_transactions(self):
         """
         Test that we can create two transactions with the same primary key *AND* the same data
         """
-        transaction = PaymentProcessorTransaction.create(
+        transaction = PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
@@ -306,12 +306,12 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         )
 
         # look up directly in database and assert that they are the same
-        saved_transaction = PaymentProcessorTransaction.objects.get(
+        saved_transaction = PaymentTransaction.objects.get(
             remote_transaction_id=transaction.remote_transaction_id
         )
         self.assertEqual(transaction, saved_transaction)
 
-        saved_transaction2 = PaymentProcessorTransaction.create(
+        saved_transaction2 = PaymentTransaction.create(
             transaction.remote_transaction_id,
             transaction.account_id,
             transaction.processed_at,
@@ -328,7 +328,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         """
         Test that we cannot create two transactions with the same primary key
         """
-        transaction = PaymentProcessorTransaction.create(
+        transaction = PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
@@ -339,13 +339,13 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         )
 
         # look up directly in database and assert that they are the same
-        saved_transaction = PaymentProcessorTransaction.objects.get(
+        saved_transaction = PaymentTransaction.objects.get(
             remote_transaction_id=transaction.remote_transaction_id
         )
         self.assertEqual(transaction, saved_transaction)
 
         with self.assertRaises(IntegrityError):
-            PaymentProcessorTransaction.create(
+            PaymentTransaction.create(
                 transaction.remote_transaction_id,
                 uuid.uuid4(),
                 datetime.datetime.now(pytz.UTC),
@@ -360,7 +360,7 @@ class PaymentProcessorTransactionModelTests(ModuleStoreTestCase):
         Make sure we can't have multiple mappings of a transaction to the same course
         """
 
-        transaction = PaymentProcessorTransaction.create(
+        transaction = PaymentTransaction.create(
             uuid.uuid4(),
             uuid.uuid4(),
             datetime.datetime.now(pytz.UTC),
