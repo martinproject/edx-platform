@@ -733,7 +733,6 @@ def get_report_data_for_account(account_name, config, date):
     )
 
     log.info('Fetching CyberSource transaction data via: {}'.format(url))
-    print 'Fetching CyberSource transaction data via: {}'.format(url)
 
     response = requests.get(url, auth=(config['REPORTING_AUTH_USERNAME'], config['REPORTING_AUTH_PASSWORD']))
     if response.status_code == 400:
