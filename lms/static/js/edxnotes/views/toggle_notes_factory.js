@@ -23,8 +23,8 @@ define([
 
         toggleHandler: function (event) {
             event.preventDefault();
+            // The following lines are necessary to re-trigger the CSS animation on span.action-toggle-message
             this.actionToggleMessage.removeClass('is-fleeting');
-            // The following line is necessary to re-trigger the CSS animation:
             this.actionToggleMessage.offset().width = this.actionToggleMessage.offset().width;
             this.actionToggleMessage.addClass('is-fleeting');
             this.visibility = !this.visibility;
