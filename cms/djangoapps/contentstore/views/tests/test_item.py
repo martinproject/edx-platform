@@ -929,7 +929,6 @@ class TestEditItem(ItemTest):
         )
         self.assertEqual(resp.status_code, 200)
         self._verify_published_with_draft(unit_usage_key)
-        self._verify_published_with_draft(html_usage_key)
 
 
 class TestEditSplitModule(ItemTest):
