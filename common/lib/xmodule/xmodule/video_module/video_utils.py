@@ -67,7 +67,8 @@ def get_branding_info(branding_info):
         return None
 
 
-def get_video_from_cdn(cdn_base_url, original_video_url, cdn_branding_logo_url):
+# def get_video_from_cdn(cdn_base_url, original_video_url, cdn_branding_logo_url): ## Not sure if this third variable is necessary...
+def get_video_from_cdn(cdn_base_url, original_video_url):
     """
     Get video URL from CDN.
 
