@@ -24,6 +24,7 @@ from ...pages.lms.video.video import VideoPage
 from ...pages.lms.courseware import CoursewarePage
 from ...pages.lms.login_and_register import CombinedLoginAndRegisterPage
 from ...pages.lms.track_selection import TrackSelectionPage
+from ...pages.lms.pay_and_verify import PaymentAndVerificationFlow, FakePaymentPage
 from ...fixtures.course import CourseFixture, XBlockFixtureDesc, CourseUpdateDesc
 
 
@@ -233,9 +234,16 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
 class PayAndVerifyTest(UniqueCourseTest):
     """Test that we can proceed through the payment and verification flow."""
     def setUp(self):
-        """Initialize the page objects, create a test course, create a user and log them in."""
+        """Initialize the test.
+
+        Create the necessary page objects, create a test course and configure its modes,
+        create a user and log them in.
+        """
         super(PayAndVerifyTest, self).setUp()
         self.track_selection_page = TrackSelectionPage(self.browser, self.course_id, separate_verified=True)
+        self.payment_and_verification_flow = PaymentAndVerificationFlow(self.browser, self.course_id)
+        self.immediate_verification_page = PaymentAndVerificationFlow(self.browser, self.course_id, entry_point='verify-now')
+        self.fake_payment_page = FakePaymentPage(self.browser, self.course_id)
 
         # Create a course
         CourseFixture(
@@ -249,7 +257,7 @@ class PayAndVerifyTest(UniqueCourseTest):
         ModeCreationPage(self.browser, self.course_id).visit()
 
         # Add a verified mode to the course
-        ModeCreationPage(self.browser, self.course_id, mode_slug='verified', mode_display_name='Verified Certificate').visit()
+        ModeCreationPage(self.browser, self.course_id, mode_slug=u'verified', mode_display_name=u'Verified Certificate', min_price=10, suggested_prices='10,20').visit()
 
         # Create a user and log them in
         AutoAuthPage(self.browser).visit()
@@ -258,8 +266,28 @@ class PayAndVerifyTest(UniqueCourseTest):
         # Navigate to the track selection page
         self.track_selection_page.visit()
 
-        # Enter the payment and verification flow by opting to enroll as verified
-        self.track_selection_page.enroll("verified")
+        # Enter the payment and verification flow by choosing to enroll as verified
+        self.track_selection_page.enroll('verified')
+
+        # Proceed to the fake payment page
+        self.payment_and_verification_flow.proceed_to_payment()
+
+        # Submit payment
+        self.fake_payment_page.submit_payment()
+
+        # Proceed to verification
+        self.payment_and_verification_flow.immediate_verification()
+
+        # Take face photo and proceed to the ID photo step
+        self.payment_and_verification_flow.webcam_capture()
+        self.payment_and_verification_flow.next_verification_step(self.immediate_verification_page)
+
+        # Take ID photo and proceed to the review photos step
+        self.payment_and_verification_flow.webcam_capture()
+        self.payment_and_verification_flow.next_verification_step(self.immediate_verification_page)
+
+        # Proceed to the enrollment confirmation step
+        self.payment_and_verification_flow.next_verification_step(self.immediate_verification_page)
 
 
 class LanguageTest(WebAppTest):

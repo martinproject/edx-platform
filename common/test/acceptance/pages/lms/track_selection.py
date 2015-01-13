@@ -1,10 +1,11 @@
 """Track selection page"""
 
 from urllib import urlencode
+
 from bok_choy.page_object import PageObject, unguarded
 from bok_choy.promise import Promise, EmptyPromise
 from . import BASE_URL
-from .dashboard import DashboardPage
+from .pay_and_verify import PaymentAndVerificationFlow
 
 
 class TrackSelectionPage(PageObject):
@@ -43,7 +44,7 @@ class TrackSelectionPage(PageObject):
         return url
 
     def is_browser_on_page(self):
-        """Check if the track selection page has loaded. """
+        """Check if the track selection page has loaded."""
         return self.q(css=".wrapper-register-choose").is_present()
 
     def enroll(self, mode="honor"):
@@ -59,9 +60,9 @@ class TrackSelectionPage(PageObject):
             self.q("input[name='honor_mode']").click()
         elif mode == "verified":
             # Check the first contribution option, then click the enroll button
-            self.q(".contribution-option > input").first.click()
-            self.q("input[name='verified_mode']").click()
+            self.q(css=".contribution-option > input").first.click()
+            self.q(css="input[name='verified_mode']").click()
         else:
             raise ValueError("Mode must be either 'honor' or 'verified'.")
 
-        return TrackSelectionPage(self.browser).wait_for_page()
+        return PaymentAndVerificationFlow(self.browser, self._course_id).wait_for_page()

@@ -309,7 +309,7 @@ FEATURES = {
     # Separate the verification flow from the payment flow
     'SEPARATE_VERIFICATION_FROM_PAYMENT': False,
 
-    # For easily adding modes to courses, during acceptance testing
+    # For easily adding modes to courses during acceptance testing
     'MODE_CREATION_FOR_TESTING': False,
 }
 
