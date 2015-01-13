@@ -6,7 +6,7 @@ define([
 ], function($, _, Backbone, gettext, Annotator, EdxnotesVisibilityDecorator) {
     var ToggleNotesView = Backbone.View.extend({
         events: {
-            'click .action-toggle-notes': 'toogleHandler'
+            'click .action-toggle-notes': 'toggleHandler'
         },
 
         errorMessage: gettext("An error has occurred. Make sure that you are connected to the Internet, and then try refreshing the page."),
@@ -17,11 +17,16 @@ define([
             this.label = this.$('.utility-control-label');
             this.actionLink = this.$('.action-toggle-notes');
             this.actionLink.removeClass('is-disabled');
+            this.actionToggleMessage = this.$('.action-toggle-message');
             this.notification = new Annotator.Notification();
         },
 
-        toogleHandler: function (event) {
+        toggleHandler: function (event) {
             event.preventDefault();
+            this.actionToggleMessage.removeClass('is-fleeting');
+            // The following line is necessary to re-trigger the CSS animation:
+            this.actionToggleMessage.offset().width = this.actionToggleMessage.offset().width;
+            this.actionToggleMessage.addClass('is-fleeting');
             this.visibility = !this.visibility;
             this.toggleNotes();
             this.sendRequest();
@@ -32,10 +37,12 @@ define([
                 _.each($('.edx-notes-wrapper'), EdxnotesVisibilityDecorator.enableNote);
                 this.actionLink.addClass('is-active').attr('aria-pressed', true);
                 this.label.text(gettext('Hide notes'));
+                this.actionToggleMessage.text(gettext('Showing notes'));
             } else {
                 EdxnotesVisibilityDecorator.disableNotes();
                 this.actionLink.removeClass('is-active').attr('aria-pressed', false);
                 this.label.text(gettext('Show notes'));
+                this.actionToggleMessage.text(gettext('Hiding notes'));
             }
         },
 
