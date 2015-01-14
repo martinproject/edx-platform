@@ -12,6 +12,7 @@ define([
         errorMessage: gettext("An error has occurred. Make sure that you are connected to the Internet, and then try refreshing the page."),
 
         initialize: function (options) {
+            _.bindAll(this, 'onSuccess', 'onError');
             this.visibility = options.visibility;
             this.visibilityUrl = options.visibilityUrl;
             this.label = this.$('.utility-control-label');
@@ -23,27 +24,39 @@ define([
 
         toggleHandler: function (event) {
             event.preventDefault();
+            this.visibility = !this.visibility;
+            this.showActionMessage();
+            this.toggleNotes(this.visibility);
+        },
+
+        toggleNotes: function (visibility) {
+            if (visibility) {
+                this.enableNotes();
+            } else {
+                this.disableNotes();
+            }
+            this.sendRequest();
+        },
+
+        showActionMessage: function () {
             // The following lines are necessary to re-trigger the CSS animation on span.action-toggle-message
             this.actionToggleMessage.removeClass('is-fleeting');
             this.actionToggleMessage.offset().width = this.actionToggleMessage.offset().width;
             this.actionToggleMessage.addClass('is-fleeting');
-            this.visibility = !this.visibility;
-            this.toggleNotes();
-            this.sendRequest();
         },
 
-        toggleNotes: function () {
-            if (this.visibility) {
-                _.each($('.edx-notes-wrapper'), EdxnotesVisibilityDecorator.enableNote);
-                this.actionLink.addClass('is-active').attr('aria-pressed', true);
-                this.label.text(gettext('Hide notes'));
-                this.actionToggleMessage.text(gettext('Showing notes'));
-            } else {
-                EdxnotesVisibilityDecorator.disableNotes();
-                this.actionLink.removeClass('is-active').attr('aria-pressed', false);
-                this.label.text(gettext('Show notes'));
-                this.actionToggleMessage.text(gettext('Hiding notes'));
-            }
+        enableNotes: function () {
+            _.each($('.edx-notes-wrapper'), EdxnotesVisibilityDecorator.enableNote);
+            this.actionLink.addClass('is-active').attr('aria-pressed', true);
+            this.label.text(gettext('Hide notes'));
+            this.actionToggleMessage.text(gettext('Showing notes'));
+        },
+
+        disableNotes: function () {
+            EdxnotesVisibilityDecorator.disableNotes();
+            this.actionLink.removeClass('is-active').attr('aria-pressed', false);
+            this.label.text(gettext('Show notes'));
+            this.actionToggleMessage.text(gettext('Hiding notes'));
         },
 
         hideErrorMessage: function() {
@@ -60,8 +73,8 @@ define([
                 url: this.visibilityUrl,
                 dataType: 'json',
                 data: JSON.stringify({'visibility': this.visibility}),
-                success: _.bind(this.onSuccess, this),
-                error: _.bind(this.onError, this)
+                success: this.onSuccess,
+                error: this.onError
             });
         },
 
