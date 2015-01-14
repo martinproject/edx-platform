@@ -8,12 +8,12 @@ from django.test import TestCase
 
 from xmodule.modulestore.tests.factories import CourseFactory
 
-from .utils import mobile_access_when_enrolled, mobile_course_access, mobile_view
+from .utils import mobile_course_listing_access, mobile_course_access, mobile_view, dict_value
 from .testutils import MobileAPITestCase, ROLE_CASES
 
 
 @ddt.ddt
-class TestMobileAccessWhenEnrolled(MobileAPITestCase):
+class TestMobileCourseListingAccess(MobileAPITestCase):
     """
     Tests for mobile_access_when_enrolled utility function.
     """
@@ -26,26 +26,26 @@ class TestMobileAccessWhenEnrolled(MobileAPITestCase):
         non_mobile_course = CourseFactory.create(mobile_available=False)
         if role:
             role(non_mobile_course.id).add_users(self.user)
-        self.assertEqual(should_have_access, mobile_access_when_enrolled(non_mobile_course, self.user))
+        self.assertEqual(should_have_access, mobile_course_listing_access(non_mobile_course, self.user))
 
     def test_mobile_explicit_access(self):
         """
         Verifies that our mobile access function listens to the mobile_available flag as it should
         """
-        self.assertTrue(mobile_access_when_enrolled(self.course, self.user))
+        self.assertTrue(mobile_course_listing_access(self.course, self.user))
 
     def test_missing_course(self):
         """
         Verifies that we handle the case where a course doesn't exist
         """
-        self.assertFalse(mobile_access_when_enrolled(None, self.user))
+        self.assertFalse(mobile_course_listing_access(None, self.user))
 
     @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
     def test_unreleased_course(self):
         """
-        Verifies that we handle the case where a course hasn't started
+        Verifies that we allow the case where a course hasn't started
         """
-        self.assertFalse(mobile_access_when_enrolled(self.course, self.user))
+        self.assertTrue(mobile_course_listing_access(self.course, self.user))
 
 
 @ddt.ddt
@@ -65,3 +65,30 @@ class TestMobileAPIDecorators(TestCase):
         self.assertIn("Test docstring of decorated function.", decorated_func.__doc__)
         self.assertEquals(decorated_func.__name__, "decorated_func")
         self.assertTrue(decorated_func.__module__.endswith("tests"))
+
+
+class TestSettingContextManager(TestCase):
+    """
+    Tests for setting contextmanager.
+    """
+    def setUp(self):
+        super(TestSettingContextManager, self).setUp()
+        self.test_settings = {}
+        self.test_key = 'test key'
+
+    def call_context_manager(self):
+        """Helper method that calls the context manager."""
+        new_value = "new value"
+        with dict_value(self.test_settings, self.test_key, new_value):
+            self.assertEquals(self.test_settings[self.test_key], new_value)
+
+    def test_no_previous_value(self):
+        self.call_context_manager()
+        self.assertNotIn(self.test_key, self.test_settings)
+
+    def test_has_previous_value(self):
+        old_value = "old value"
+        self.test_settings[self.test_key] = old_value
+
+        self.call_context_manager()
+        self.assertEquals(self.test_settings[self.test_key], old_value)
