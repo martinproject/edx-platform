@@ -1615,7 +1615,7 @@ TRANSACTION_TYPE_PURCHASE = 'p'
 TRANSACTION_TYPE_REFUND = 'r'
 
 
-class PaymentProcessorTransaction(TimeStampedModel):
+class PaymentTransaction(TimeStampedModel):
     """
     This model will act as a copy of all transaction information that is stored on any Payment Processor. We
     have a syncronization management command to extract all of the daily reports and store
@@ -1666,7 +1666,7 @@ class PaymentProcessorTransaction(TimeStampedModel):
     @classmethod
     def create(cls, remote_transaction_id, account_id, processed_at, order_id, currency, amount, transaction_type):
         """
-        This classmethod will create a new entry in the PaymentProcessorTransaction table
+        This classmethod will create a new entry in the PaymentTransaction table
         It will use a get_or_create() at the ORM level.
         We enforce that a Transaction is immutable and we therefore will
         not support update cases
@@ -1684,7 +1684,7 @@ class PaymentProcessorTransaction(TimeStampedModel):
             )
             raise OrderDoesNotExistException(msg)
 
-        cc_transaction = PaymentProcessorTransaction(
+        cc_transaction = PaymentTransaction(
             remote_transaction_id=remote_transaction_id,
             account_id=account_id,
             processed_at=processed_at,
@@ -1695,7 +1695,7 @@ class PaymentProcessorTransaction(TimeStampedModel):
         )
 
         # Do a quick check to see if it exists
-        exists = PaymentProcessorTransaction.objects.filter(remote_transaction_id=remote_transaction_id).exists()
+        exists = PaymentTransaction.objects.filter(remote_transaction_id=remote_transaction_id).exists()
 
         if exists:
             # see if an already existing row is *exactly* the same
@@ -1720,9 +1720,9 @@ class PaymentProcessorTransaction(TimeStampedModel):
     @classmethod
     def get_by_remote_transaction_id(cls, remote_transaction_id):
         """
-        This will return a PaymentProcessorTransaction by the remote_transaction_id
+        This will return a PaymentTransaction by the remote_transaction_id
         """
-        return PaymentProcessorTransaction.objects.get(remote_transaction_id=remote_transaction_id)
+        return PaymentTransaction.objects.get(remote_transaction_id=remote_transaction_id)
 
     @classmethod
     def get_transactions_for_course(cls, course_key, transaction_type=None, start=None, end=None):
@@ -1841,7 +1841,7 @@ class PaymentProcessorTransaction(TimeStampedModel):
         return obj[0]['last'] if obj else None
 
 
-@receiver(pre_save, sender=PaymentProcessorTransaction)
+@receiver(pre_save, sender=PaymentTransaction)
 def pre_transaction_save(sender, **kwargs):  # pylint: disable=unused-argument
     """
     Do some assumption validation regarding transactions
@@ -1850,10 +1850,10 @@ def pre_transaction_save(sender, **kwargs):  # pylint: disable=unused-argument
     cc_transaction.validate()
 
 
-@receiver(post_save, sender=PaymentProcessorTransaction)
+@receiver(post_save, sender=PaymentTransaction)
 def post_transaction_save(sender, **kwargs):  # pylint: disable=unused-argument
     """
-    Whenever we save a new PaymentProcessorTransaction, we should generate the mappings into
+    Whenever we save a new PaymentTransaction, we should generate the mappings into
     the PaymentTransactionCourseMap
     """
 
@@ -1892,7 +1892,7 @@ class PaymentTransactionCourseMap(models.Model):
     generation
     """
 
-    transaction = models.ForeignKey(PaymentProcessorTransaction, db_index=True)
+    transaction = models.ForeignKey(PaymentTransaction, db_index=True)
     course_id = CourseKeyField(max_length=255, db_index=True)
     order_item = models.ForeignKey(OrderItem, db_index=True)
     currency = models.CharField(max_length=16)
